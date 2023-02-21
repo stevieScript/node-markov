@@ -2,23 +2,26 @@
 let axios = require("axios");
 const fs = require("fs");
 const { MarkovMachine } = require("./markov");
+const process = require("process");
 
 function generateText(text) {
     let mm = new MarkovMachine(text);
     console.log(mm.makeText());
-    return mm.makeText();
 }
 
-function cat(type, path) {
-    if(type === 'url'){
-        axios.get(path).then(function (res) {
-            generateText(res.data);
-        }).catch(function (err) {
-            console.error(`Error fetching ${path}: ${err}`);
-            process.exit(1);
-        });
-    } else {
+async function urlText(url) {
+    let res 
+    try {
+        res = await axios.get(url);
+    }
+    catch (err) {
+        console.error(`Error fetching ${url}: ${err}`);
+        process.exit(1);
+    }
+    generateText(res.data);
+}
 
+function fileText(path) {
     fs.readFile(path, "utf8", function (err, data) {
         if (err) {
             console.error(`Error reading ${path}: ${err}`);
@@ -27,15 +30,23 @@ function cat(type, path) {
             generateText(data);
         }
     });
-}}
+}
 
-let type = process.argv[2];
-let path = process.argv[3];
+let [type, path] = process.argv.slice(2);
 
-if (path === undefined) {
-    console.error(`Usage: node ${process.argv[1]} FILE`);
+
+if (type === "file") {
+    fileText(path);
+} else if (type === "url") {
+    urlText(path);
+} else {
+    console.error(`Unknown type: ${type}`);
     process.exit(1);
 }
 
-cat(type, path);
 
+module.exports = {
+    generateText,
+    urlText,
+    fileText,
+};
